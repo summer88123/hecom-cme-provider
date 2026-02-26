@@ -1,0 +1,36 @@
+{
+  "// 说明": "这是配置示例文件，复制到 settings.json 并填入实际值",
+  "// 注意": "不要将包含真实 AK/SK 的配置提交到代码仓库",
+  
+  "// 华为云 CodeArts 配置": "以下配置用于 Issue Provider",
+  "hecomCmeProvider.huaweiCloud.accessKey": "",
+  "hecomCmeProvider.huaweiCloud.secretKey": "",
+  "hecomCmeProvider.huaweiCloud.projectId": "",
+  "hecomCmeProvider.huaweiCloud.region": "cn-north-4",
+  
+  "// 主插件配置示例": "以下是在主插件中使用 Provider 的配置",
+  "commit-message-editor.tokens": [
+    {
+      "label": "Type",
+      "name": "type",
+      "type": "enum",
+      "options": [
+        { "label": "feat", "value": "feat", "description": "新功能" },
+        { "label": "fix", "value": "fix", "description": "Bug 修复" }
+      ]
+    },
+    {
+      "label": "Issue",
+      "name": "issue",
+      "type": "dynamic-enum",
+      "provider": "hecom.huawei-cloud-issues",
+      "description": "选择关联的华为云 CodeArts Issue"
+    },
+    {
+      "label": "Subject",
+      "name": "subject",
+      "type": "text",
+      "maxLength": 100
+    }
+  ]
+}

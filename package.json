@@ -18,20 +18,25 @@
     "configuration": {
       "title": "Hecom CME Provider",
       "properties": {
-        "hecomCmeProvider.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "启用 Hecom CME Provider"
+        "hecomCmeProvider.huaweiCloud.accessKey": {
+          "type": "string",
+          "default": "",
+          "description": "华为云 AccessKey (AK)"
         },
-        "hecomCmeProvider.projectTypes": {
-          "type": "array",
-          "default": [
-            "frontend",
-            "backend",
-            "mobile",
-            "common"
-          ],
-          "description": "项目类型列表"
+        "hecomCmeProvider.huaweiCloud.secretKey": {
+          "type": "string",
+          "default": "",
+          "description": "华为云 SecretKey (SK)"
+        },
+        "hecomCmeProvider.huaweiCloud.projectId": {
+          "type": "string",
+          "default": "",
+          "description": "华为云 ProjectMan 项目 ID"
+        },
+        "hecomCmeProvider.huaweiCloud.region": {
+          "type": "string",
+          "default": "cn-north-4",
+          "description": "华为云区域"
         }
       }
     }
@@ -57,5 +62,7 @@
     "typescript": "^4.9.3",
     "@vscode/test-electron": "^2.2.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@huaweicloud/huaweicloud-sdk-projectman": "^3.1.0"
+  }
 }

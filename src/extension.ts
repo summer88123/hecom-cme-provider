@@ -1,57 +1,60 @@
 import * as vscode from 'vscode';
-import { HecomOptionsProvider } from './HecomOptionsProvider';
+import { IssueProvider } from './providers/IssueProvider';
 
 /**
  * 扩展激活函数
  */
-export function activate(_context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
   console.log('Hecom CME Provider 已激活');
 
-  // 创建 provider 实例
-  const provider = new HecomOptionsProvider();
+  // 获取主插件 API
+  const cmeExtension = vscode.extensions.getExtension('hecom.hecom-commit-message-editor');
+  
+  if (!cmeExtension) {
+    vscode.window.showWarningMessage(
+      'Hecom CME Provider: 未找到 Commit Message Editor 扩展，请先安装该扩展。'
+    );
+    return;
+  }
 
-  // 注册 provider 到 hecom-commit-message-editor
-  // 这里需要等待主插件暴露注册 API
-  try {
-    // 尝试获取主插件的 API
-    const cmeExtension = vscode.extensions.getExtension('adam-bender.hecom-commit-message-editor');
-    
-    if (cmeExtension) {
+  // 等待主插件激活并注册 providers
+  const registerProviders = async () => {
+    try {
+      let api: any;
+      
       if (!cmeExtension.isActive) {
-        cmeExtension.activate().then((api) => {
-          registerProvider(api, provider);
-        });
+        api = await cmeExtension.activate();
       } else {
-        const api = cmeExtension.exports;
-        registerProvider(api, provider);
+        api = cmeExtension.exports;
       }
-    } else {
-      vscode.window.showWarningMessage(
-        'Hecom CME Provider: 未找到 Commit Message Editor 扩展，请先安装该扩展。'
+
+      if (!api || typeof api.registerDynamicOptionsProvider !== 'function') {
+        vscode.window.showErrorMessage(
+          'Hecom CME Provider: 主插件版本过旧，不支持 Dynamic Options Provider API'
+        );
+        return;
+      }
+
+      // 注册华为云 Issue Provider
+      const issueProvider = new IssueProvider();
+      const issueProviderDisposable = api.registerDynamicOptionsProvider(
+        'hecom.huawei-cloud-issues',
+        issueProvider
+      );
+      context.subscriptions.push(issueProviderDisposable);
+
+      console.log('Hecom CME Provider: 华为云 Issue Provider 注册成功');
+      vscode.window.showInformationMessage('Hecom CME Provider 已成功注册');
+
+    } catch (error) {
+      console.error('注册 Hecom CME Provider 失败:', error);
+      vscode.window.showErrorMessage(
+        `Hecom CME Provider: 注册失败 - ${error instanceof Error ? error.message : String(error)}`
       );
     }
-  } catch (error) {
-    console.error('注册 Hecom CME Provider 失败:', error);
-    vscode.window.showErrorMessage(
-      `Hecom CME Provider: 注册失败 - ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
+  };
 
-/**
- * 注册 provider
- */
-function registerProvider(api: any, provider: HecomOptionsProvider) {
-  if (api && typeof api.registerOptionsProvider === 'function') {
-    api.registerOptionsProvider('hecom', provider);
-    console.log('Hecom CME Provider 注册成功');
-    vscode.window.showInformationMessage('Hecom CME Provider 已成功注册');
-  } else {
-    console.error('Commit Message Editor API 不支持 registerOptionsProvider 方法');
-    vscode.window.showWarningMessage(
-      'Hecom CME Provider: 主插件版本可能不支持动态 provider，请更新 Commit Message Editor 扩展。'
-    );
-  }
+  registerProviders();
 }
 
 /**

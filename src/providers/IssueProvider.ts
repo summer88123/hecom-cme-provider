@@ -1,12 +1,11 @@
+import { ListWorkTableIssueRequestV4RequestBody } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListWorkTableIssueRequestV4RequestBody';
+import { SearchIssuesRequest } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/SearchIssuesRequest';
 import * as vscode from 'vscode';
-import { ProjectManClient } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManClient';
-import { GlobalCredentials } from '@huaweicloud/huaweicloud-sdk-core/auth/GlobalCredentials';
-import { ListIssuesV4Request } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListIssuesV4Request';
-import { ProjectManRegion } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManRegion';
+import { ProjectManClientManager } from '../clients/ProjectManClientManager';
 import type {
-  DynamicOptionsProvider,
-  DynamicOptionsContext,
   DynamicOptionItem,
+  DynamicOptionsContext,
+  DynamicOptionsProvider,
 } from '../types/cme-api';
 
 /**
@@ -15,10 +14,11 @@ import type {
  * 实现 DynamicOptionsProvider 接口，从华为云 CodeArts 获取 Issue 列表
  */
 export class IssueProvider implements DynamicOptionsProvider {
-  private client?: ProjectManClient;
+  private clientManager: ProjectManClientManager;
   private projectId?: string; // CodeArts 项目 ID（业务用）
 
   constructor() {
+    this.clientManager = ProjectManClientManager.getInstance();
     this.initialize();
     
     // 监听配置变更
@@ -35,40 +35,22 @@ export class IssueProvider implements DynamicOptionsProvider {
   private initialize() {
     try {
       const config = vscode.workspace.getConfiguration('hecomCmeProvider');
-      const ak = config.get<string>('huaweiCloud.accessKey');
-      const sk = config.get<string>('huaweiCloud.secretKey');
-      const domainId = config.get<string>('huaweiCloud.domainId'); // 认证用的 Domain ID
       const projectId = config.get<string>('huaweiCloud.projectId'); // CodeArts 项目 ID
-      const region = config.get<string>('huaweiCloud.region', 'cn-north-4');
 
-      if (!ak || !sk || !domainId || !projectId) {
-        console.warn('华为云配置不完整，请在设置中配置 AK/SK、DomainId 和 ProjectId');
-        this.client = undefined;
+      if (!projectId) {
+        console.warn('华为云配置不完整，请在设置中配置 ProjectId');
         this.projectId = undefined;
         return;
       }
 
       this.projectId = projectId;
 
-      // 创建认证信息（使用 domainId 进行认证）
-      const credentials = new GlobalCredentials()
-        .withAk(ak)
-        .withSk(sk)
-        .withDomainId(domainId);
+      // 使用统一的客户端管理器初始化客户端
+      this.clientManager.initializeFromConfig();
 
-      // 获取 Region 对象
-      const regionObj = ProjectManRegion.valueOf(region);
-
-      // 创建 ProjectMan 客户端
-      this.client = ProjectManClient.newBuilder()
-        .withCredential(credentials)
-        .withRegion(regionObj)
-        .build();
-
-      console.log('华为云 CodeArts 客户端初始化成功');
+      console.log('华为云 CodeArts IssueProvider 初始化成功');
     } catch (error) {
-      console.error('初始化华为云客户端失败:', error);
-      this.client = undefined;
+      console.error('初始化华为云 IssueProvider 失败:', error);
       this.projectId = undefined;
     }
   }
@@ -78,7 +60,9 @@ export class IssueProvider implements DynamicOptionsProvider {
    * 提供 Issue 选项列表
    */
   async provideOptions(context: DynamicOptionsContext): Promise<DynamicOptionItem[]> {
-    if (!this.client || !this.projectId) {
+    const client = this.clientManager.getClient();
+    
+    if (!client || !this.projectId) {
       throw new Error('华为云配置不完整，请在设置中配置 AK/SK、DomainId 和 ProjectId');
     }
 
@@ -88,29 +72,37 @@ export class IssueProvider implements DynamicOptionsProvider {
     }
 
     try {
-      const request = new ListIssuesV4Request();
-      request.projectId = this.projectId;
+      const request = new SearchIssuesRequest();
+      const body = new ListWorkTableIssueRequestV4RequestBody();
+      
+      // 设置分页和基本查询参数
+      body.withOffset(0);
+      body.withLimit(100);
       
       // 可以根据需要添加更多过滤条件
-      // request.offset = 0;
-      // request.limit = 100;
-
-      const response = await this.client.listIssuesV4(request);
+      body.withStatusId("1,15,2,13");  // 只查询待处理的状态
+      body.withTrackerId("2,3");       // 查询 bug 和 task 类型的 Issue
       
-      if (!response || !response.issues) {
+      request.withBody(body);
+
+      const response = await client.searchIssues(request);
+      // @ts-ignore
+      if (!response || !response.issue_list) {
         console.warn('未获取到 Issue 数据');
         return [];
       }
 
-      // 转换为 DynamicOptionItem 格式
-      const options: DynamicOptionItem[] = response.issues.map((issue: any) => {
+      // 转换为 DynamicOptionItem 格式 
+      //  @ts-ignore
+      const options: DynamicOptionItem[] = response.issue_list.map((issue) => {
         const subject = issue.subject || '无标题';
         const statusName = issue.status?.name || '';
-        const description = statusName ? `${subject} [${statusName}]` : subject;
+        const trackerName = issue.tracker?.name || '';
+        const description = `[${statusName}]`;
         
         return {
-          label: `#${issue.id}`,
-          value: String(issue.id),
+          label: `[${trackerName}] ${subject}`,
+          value: `${subject}: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/${this.projectId}/task/detail/${issue.id} `,
           description: description,
         };
       });

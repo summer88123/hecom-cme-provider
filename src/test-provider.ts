@@ -1,7 +1,6 @@
-import { ProjectManClient } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManClient';
-import { GlobalCredentials } from '@huaweicloud/huaweicloud-sdk-core/auth/GlobalCredentials';
-import { ListIssuesV4Request } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListIssuesV4Request';
-import { ProjectManRegion } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManRegion';
+import { ListWorkTableIssueRequestV4RequestBody } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListWorkTableIssueRequestV4RequestBody';
+import { SearchIssuesRequest } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/SearchIssuesRequest';
+import { ProjectManClientManager } from './clients/ProjectManClientManager';
 
 /**
  * 测试华为云 Issue Provider 连接
@@ -28,33 +27,42 @@ async function testHuaweiCloudConnection() {
   try {
     console.log('🔌 正在连接华为云 CodeArts...');
     
-    // 创建认证（使用 domainId）
-    const credentials = new GlobalCredentials()
-      .withAk(accessKey)
-      .withSk(secretKey)
-      .withDomainId(domainId);
+    // 使用客户端管理器初始化客户端
+    const clientManager = ProjectManClientManager.getInstance();
+    clientManager.initialize({
+      accessKey,
+      secretKey,
+      domainId,
+      region
+    });
 
-    // 创建客户端
-    const client = ProjectManClient.newBuilder()
-      .withCredential(credentials)
-      .withRegion(ProjectManRegion.valueOf(region))
-      .build();
+    const client = clientManager.getClient();
+    if (!client) {
+      throw new Error('客户端初始化失败');
+    }
 
     console.log('✅ 客户端创建成功');
     console.log('');
 
     // 创建请求
-    const request = new ListIssuesV4Request();
-    request.projectId = projectId;
+    const request = new SearchIssuesRequest();
+    const body = new ListWorkTableIssueRequestV4RequestBody();
+    
+    // 设置分页参数
+    body.withOffset(0);
+    body.withLimit(100);
+    
+    request.withBody(body);
 
     console.log('📡 正在获取 Issue 列表...');
-    const response = await client.listIssuesV4(request);
+    const response = await client.searchIssues(request);
 
     console.log('✅ 获取成功！');
     console.log('');
 
     // 显示结果
-    const issues = response.issues || [];
+    // @ts-ignore - 华为云 SDK 类型定义问题
+    const issues = response.issue_list || [];
     console.log(`📋 找到 ${issues.length} 个 Issue:`);
     console.log('');
 

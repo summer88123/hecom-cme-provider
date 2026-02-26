@@ -51,6 +51,7 @@
 {
   "hecomCmeProvider.huaweiCloud.accessKey": "your-ak",
   "hecomCmeProvider.huaweiCloud.secretKey": "your-sk",
+  "hecomCmeProvider.huaweiCloud.domainId": "your-domain-id",
   "hecomCmeProvider.huaweiCloud.projectId": "your-project-id",
   "hecomCmeProvider.huaweiCloud.region": "cn-north-4"
 }
@@ -60,14 +61,20 @@
 
 - `accessKey`: 华为云访问密钥（AK）
 - `secretKey`: 华为云密钥（SK）
-- `projectId`: CodeArts 项目 ID
+- `domainId`: 华为云 Domain ID（用于 AK/SK 认证）
+- `projectId`: CodeArts 项目 ID（用于查询 Issue 数据）
 - `region`: 华为云区域（默认：cn-north-4）
 
 **如何获取配置信息：**
 
 1. **AK/SK**: 登录华为云控制台 → 我的凭证 → 访问密钥 → 创建访问密钥
-2. **Project ID**: 在 CodeArts 项目管理页面的 URL 中可以找到项目 ID
-3. **Region**: 选择您的华为云资源所在区域
+2. **Domain ID**: 登录华为云控制台 → 我的凭证 → API 凭证 → 项目 ID（与 AK/SK 关联的账户 ID）
+3. **Project ID**: 在 CodeArts 项目页面的 URL 中获取，格式如 `https://devcloud.huaweicloud.com/cloudui/project/{project_id}/...`
+4. **Region**: 选择您的华为云资源所在区域
+
+**注意：** 华为云 SDK 有两个不同的 ID 概念：
+- **Domain ID**：用于 AK/SK 认证，关联到账户级别
+- **Project ID**：用于查询具体的 CodeArts 项目数据
 
 #### 在主插件中使用
 

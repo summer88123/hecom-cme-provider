@@ -28,10 +28,15 @@
           "default": "",
           "description": "华为云 SecretKey (SK)"
         },
+        "hecomCmeProvider.huaweiCloud.domainId": {
+          "type": "string",
+          "default": "",
+          "description": "华为云 Domain ID（用于认证，与 AK/SK 配合使用）"
+        },
         "hecomCmeProvider.huaweiCloud.projectId": {
           "type": "string",
           "default": "",
-          "description": "华为云 ProjectMan 项目 ID"
+          "description": "华为云 CodeArts 项目 ID（用于查询 Issue 数据）"
         },
         "hecomCmeProvider.huaweiCloud.region": {
           "type": "string",
@@ -50,19 +55,20 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
     "eslint": "^8.28.0",
     "glob": "^8.0.3",
     "mocha": "^10.1.0",
-    "typescript": "^4.9.3",
-    "@vscode/test-electron": "^2.2.0"
+    "typescript": "^4.9.3"
   },
   "dependencies": {
-    "@huaweicloud/huaweicloud-sdk-projectman": "^3.1.0"
+    "@huaweicloud/huaweicloud-sdk-projectman": "^3.1.0",
+    "uuid": "^13.0.0"
   }
 }

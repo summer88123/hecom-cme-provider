@@ -5,7 +5,10 @@
   "// 华为云 CodeArts 配置": "以下配置用于 Issue Provider",
   "hecomCmeProvider.huaweiCloud.accessKey": "",
   "hecomCmeProvider.huaweiCloud.secretKey": "",
+  "hecomCmeProvider.huaweiCloud.domainId": "",
+  "// domainId 说明": "用于认证的 Domain ID，与 AK/SK 配合使用",
   "hecomCmeProvider.huaweiCloud.projectId": "",
+  "// projectId 说明": "CodeArts 项目 ID，用于查询 Issue 数据",
   "hecomCmeProvider.huaweiCloud.region": "cn-north-4",
   
   "// 主插件配置示例": "以下是在主插件中使用 Provider 的配置",

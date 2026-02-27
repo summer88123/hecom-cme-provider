@@ -78,7 +78,7 @@ export class UserInfoManager {
       const response: any = await client.showCurUserInfo(request);
 
       logger.info('UserInfoManager', '用户信息', {
-        userId: response.user_id,
+        userId: response.user_num_id,
         userName: response.user_name,
         nickName: response.nick_name,
         domainId: response.domain_id,
@@ -86,7 +86,7 @@ export class UserInfoManager {
 
       // 保存用户信息
       this.userInfo = {
-        userId: response.user_id || '',
+        userId: response.user_num_id || '',
         userName: response.user_name || '',
         nickName: response.nick_name || '',
         domainId: response.domain_id || '',

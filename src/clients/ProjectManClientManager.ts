@@ -102,13 +102,6 @@ export class ProjectManClientManager {
     const domainId = config.get<string>('huaweiCloud.domainId');
     const region = config.get<string>('huaweiCloud.region', 'cn-north-4');
 
-    logger.info('ClientManager', '配置检查结果', {
-      hasAk: !!ak,
-      hasSk: !!sk,
-      hasDomainId: !!domainId,
-      region: region,
-    });
-
     if (!ak || !sk || !domainId) {
       logger.warn('ClientManager', '华为云配置不完整，请在设置中配置 AK/SK 和 DomainId');
       this.client = undefined;

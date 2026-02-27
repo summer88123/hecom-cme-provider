@@ -4,6 +4,7 @@
 # 源代码目录（编译后的代码在 out 目录）
 src/**
 !src/types/**
+!icon.png
 
 # 测试文件
 out/test/**

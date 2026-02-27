@@ -1,13 +1,13 @@
 import { ListWorkTableIssueRequestV4RequestBody } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListWorkTableIssueRequestV4RequestBody';
 import { SearchIssuesRequest } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/SearchIssuesRequest';
-import * as vscode from 'vscode';
 import { ProjectManClientManager } from '../clients/ProjectManClientManager';
-import { logger } from '../utils/logger';
+import { UserInfoManager } from '../clients/UserInfoManager';
 import type {
   DynamicOptionItem,
   DynamicOptionsContext,
   DynamicOptionsProvider,
 } from '../types/cme-api';
+import { logger } from '../utils/logger';
 
 /**
  * 华为云 CodeArts Issue Provider
@@ -16,54 +16,11 @@ import type {
  */
 export class IssueProvider implements DynamicOptionsProvider {
   private clientManager: ProjectManClientManager;
-  private projectId?: string; // CodeArts 项目 ID（业务用）
+  private userInfoManager: UserInfoManager;
 
   constructor() {
-    logger.info('IssueProvider', '构造函数开始执行');
     this.clientManager = ProjectManClientManager.getInstance();
-    this.initialize();
-    
-    // 监听配置变更
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('hecomCmeProvider.huaweiCloud')) {
-        logger.info('IssueProvider', '检测到配置变更，重新初始化');
-        this.initialize();
-      }
-    });
-    logger.info('IssueProvider', '构造函数执行完成');
-  }
-
-  /**
-   * 初始化华为云客户端
-   */
-  private initialize() {
-    logger.info('IssueProvider', '开始初始化...');
-    try {
-      const config = vscode.workspace.getConfiguration('hecomCmeProvider');
-      const projectId = config.get<string>('huaweiCloud.projectId'); // CodeArts 项目 ID
-
-      logger.info('IssueProvider', '读取配置', {
-        hasProjectId: !!projectId,
-        projectId: projectId || '未设置',
-      });
-
-      if (!projectId) {
-        logger.warn('IssueProvider', '华为云配置不完整，请在设置中配置 ProjectId');
-        this.projectId = undefined;
-        return;
-      }
-
-      this.projectId = projectId;
-
-      // 使用统一的客户端管理器初始化客户端
-      logger.info('IssueProvider', '调用客户端管理器初始化...');
-      this.clientManager.initializeFromConfig();
-
-      logger.success('IssueProvider', '华为云 CodeArts IssueProvider 初始化成功');
-    } catch (error) {
-      logger.error('IssueProvider', '初始化华为云 IssueProvider 失败', error);
-      this.projectId = undefined;
-    }
+    this.userInfoManager = UserInfoManager.getInstance();
   }
 
   /**
@@ -78,14 +35,9 @@ export class IssueProvider implements DynamicOptionsProvider {
     });
 
     const client = this.clientManager.getClient();
+    const projectId = this.userInfoManager.getProjectId();
     
-    logger.info('IssueProvider', '状态检查', {
-      hasClient: !!client,
-      hasProjectId: !!this.projectId,
-      projectId: this.projectId,
-    });
-
-    if (!client || !this.projectId) {
+    if (!client || !projectId) {
       const error = '华为云配置不完整，请在设置中配置 AK/SK、DomainId 和 ProjectId';
       logger.error('IssueProvider', error);
       throw new Error(error);
@@ -98,7 +50,6 @@ export class IssueProvider implements DynamicOptionsProvider {
     }
 
     try {
-      logger.info('IssueProvider', '开始构建请求...');
       const request = new SearchIssuesRequest();
       const body = new ListWorkTableIssueRequestV4RequestBody();
       
@@ -112,9 +63,7 @@ export class IssueProvider implements DynamicOptionsProvider {
       
       request.withBody(body);
 
-      logger.info('IssueProvider', '发送请求到华为云...');
       const response = await client.searchIssues(request);
-      logger.success('IssueProvider', '请求成功，解析响应...');
 
       // @ts-ignore
       if (!response || !response.issue_list) {
@@ -135,13 +84,11 @@ export class IssueProvider implements DynamicOptionsProvider {
         
         return {
           label: `[${trackerName}] ${subject}`,
-          value: `${subject}: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/${this.projectId}/task/detail/${issue.id} `,
+          value: `${subject}: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/${projectId}/task/detail/${issue.id} `,
           description: description,
         };
       });
 
-      logger.success('IssueProvider', `成功获取并转换 ${options.length} 个 Issue`);
-      logger.info('IssueProvider', '前 3 个 Issue', options.slice(0, 3));
       return options;
     } catch (error) {
       logger.error('IssueProvider', '获取 Issue 列表失败', error);

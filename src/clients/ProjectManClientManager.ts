@@ -2,6 +2,7 @@ import { GlobalCredentials } from '@huaweicloud/huaweicloud-sdk-core/auth/Global
 import { ProjectManClient } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManClient';
 import { ProjectManRegion } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManRegion';
 import * as vscode from 'vscode';
+import { logger } from '../utils/logger';
 
 /**
  * ProjectMan 客户端配置接口
@@ -42,22 +43,34 @@ export class ProjectManClientManager {
    * 只有在配置发生变化时才会重新创建客户端
    */
   public initialize(config: ProjectManClientConfig): void {
+    logger.info('ClientManager', '开始初始化客户端...');
+    logger.info('ClientManager', '配置信息', {
+      accessKey: config.accessKey ? `${config.accessKey.substring(0, 8)}...` : '未设置',
+      secretKey: config.secretKey ? '***已设置***' : '未设置',
+      domainId: config.domainId || '未设置',
+      region: config.region || '未设置',
+    });
+
     // 检查配置是否变化
     if (this.client && this.isSameConfig(config)) {
-      console.log('ProjectMan 客户端配置未变化，跳过重新初始化');
+      logger.info('ClientManager', '客户端配置未变化，跳过重新初始化');
       return;
     }
 
     try {
+      logger.info('ClientManager', '创建认证信息...');
       // 创建认证信息（使用 domainId 进行认证）
       const credentials = new GlobalCredentials()
         .withAk(config.accessKey)
         .withSk(config.secretKey)
         .withDomainId(config.domainId);
 
+      logger.info('ClientManager', '获取 Region 对象...');
       // 获取 Region 对象
       const regionObj = ProjectManRegion.valueOf(config.region);
+      logger.info('ClientManager', 'Region 对象已获取', { region: config.region });
 
+      logger.info('ClientManager', '创建 ProjectMan 客户端...');
       // 创建 ProjectMan 客户端
       this.client = ProjectManClient.newBuilder()
         .withCredential(credentials)
@@ -65,9 +78,9 @@ export class ProjectManClientManager {
         .build();
 
       this.currentConfig = { ...config };
-      console.log('ProjectMan 客户端初始化成功');
+      logger.success('ClientManager', 'ProjectMan 客户端初始化成功');
     } catch (error) {
-      console.error('初始化 ProjectMan 客户端失败:', error);
+      logger.error('ClientManager', '初始化 ProjectMan 客户端失败', error);
       this.client = undefined;
       this.currentConfig = undefined;
       throw error;
@@ -78,14 +91,22 @@ export class ProjectManClientManager {
    * 从 VSCode 配置初始化客户端
    */
   public initializeFromConfig(): void {
+    logger.info('ClientManager', '从 VSCode 配置读取参数...');
     const config = vscode.workspace.getConfiguration('hecomCmeProvider');
     const ak = config.get<string>('huaweiCloud.accessKey');
     const sk = config.get<string>('huaweiCloud.secretKey');
     const domainId = config.get<string>('huaweiCloud.domainId');
     const region = config.get<string>('huaweiCloud.region', 'cn-north-4');
 
+    logger.info('ClientManager', '配置检查结果', {
+      hasAk: !!ak,
+      hasSk: !!sk,
+      hasDomainId: !!domainId,
+      region: region,
+    });
+
     if (!ak || !sk || !domainId) {
-      console.warn('华为云配置不完整，请在设置中配置 AK/SK 和 DomainId');
+      logger.warn('ClientManager', '华为云配置不完整，请在设置中配置 AK/SK 和 DomainId');
       this.client = undefined;
       this.currentConfig = undefined;
       return;

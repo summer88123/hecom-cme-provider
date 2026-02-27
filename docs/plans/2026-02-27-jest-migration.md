@@ -417,7 +417,6 @@ describe('IssueProvider Test Suite', () => {
 
       expect(label).toBe(expected.label);
       expect(value).toBe(expected.value);
-      expect(description).toBe(expected.description);
     });
 
     test('应该处理没有状态的 Issue', () => {

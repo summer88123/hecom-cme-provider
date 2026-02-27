@@ -96,7 +96,6 @@ export class MyProvider implements DynamicOptionsProvider {
       return data.map(item => ({
         label: item.name,
         value: item.id,
-        description: item.description
       }));
     } catch (error) {
       // 抛出错误，由主插件处理

@@ -26,7 +26,7 @@ describe('IssueProvider Test Suite', () => {
     // 替换客户端和用户信息管理器
     const clientManager = (provider as any).clientManager;
     clientManager.getClient = jest.fn().mockReturnValue(mockClient);
-    
+
     const userInfoManager = (provider as any).userInfoManager;
     userInfoManager.getProjectId = jest.fn().mockReturnValue('test-project-id');
 
@@ -77,7 +77,6 @@ describe('IssueProvider Test Suite', () => {
       expect(result[0].value).toContain('修复登录问题:');
       expect(result[0].value).toContain('https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/test-project-id/task/detail/123');
       expect(result[0].value).not.toContain('[客户反馈]');
-      expect(result[0].description).toBe('[进行中]');
     });
 
     test('应该处理缺陷类型为"客户反馈"的 Issue', async () => {
@@ -111,7 +110,6 @@ describe('IssueProvider Test Suite', () => {
       // value 应该包含"[客户反馈]"前缀
       expect(result[0].value).toContain('[客户反馈] 用户反馈的问题:');
       expect(result[0].value).toContain('https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/test-project-id/task/detail/456');
-      expect(result[0].description).toBe('[新建]');
     });
 
     test('应该处理缺陷类型为其他值的 Issue', async () => {
@@ -145,7 +143,6 @@ describe('IssueProvider Test Suite', () => {
       // value 不应该包含"[客户反馈]"前缀
       expect(result[0].value).toContain('测试问题:');
       expect(result[0].value).not.toContain('[客户反馈]');
-      expect(result[0].description).toBe('[已解决]');
     });
 
     test('应该处理没有自定义字段的 Issue', async () => {
@@ -169,7 +166,6 @@ describe('IssueProvider Test Suite', () => {
       expect(result[0].label).toBe('[Bug] 简单问题');
       expect(result[0].value).toContain('简单问题:');
       expect(result[0].value).not.toContain('[客户反馈]');
-      expect(result[0].description).toBe('[已拒绝]');
     });
 
     test('应该处理 Issue 名称为空的情况', async () => {
@@ -201,7 +197,7 @@ describe('IssueProvider Test Suite', () => {
       // 这个测试主要验证取消令牌的数据结构
       const tokenSource = new vscode.CancellationTokenSource();
       expect(tokenSource.token.isCancellationRequested).toBe(false);
-      
+
       tokenSource.cancel();
       expect(tokenSource.token.isCancellationRequested).toBe(true);
     });
@@ -212,17 +208,17 @@ describe('IssueProvider Test Suite', () => {
       // 清除所有 mock 和配置
       jest.clearAllMocks();
       (vscode.workspace as any).__clearConfiguration();
-      
+
       // 创建新的 Provider（不使用 setupProviderWithMock）
       const provider = new IssueProvider();
-      
+
       // 重置客户端和用户信息管理器（移除之前测试的 Mock）
       const clientManager = (provider as any).clientManager;
       delete clientManager.getClient;
-      
+
       const userInfoManager = (provider as any).userInfoManager;
       delete userInfoManager.getProjectId;
-      
+
       const context: DynamicOptionsContext = {
         tokenValues: {},
       };
@@ -241,7 +237,7 @@ describe('IssueProvider Test Suite', () => {
     test('Provider 应该实现正确的接口', () => {
       const provider = new IssueProvider();
       expect('provideOptions' in provider).toBe(true);
-      
+
       const method = provider.provideOptions;
       expect(typeof method).toBe('function');
     });

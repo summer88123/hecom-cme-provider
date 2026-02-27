@@ -77,10 +77,20 @@ npm run format:check   # 检查代码格式
 ### 测试
 ```bash
 npm test               # 运行所有测试
-npm run pretest        # 编译并 lint（测试前自动执行）
+npm run test:watch     # 监视模式运行测试
+npm run test:coverage  # 运行测试并生成覆盖率报告
+npm run pretest        # lint（测试前自动执行）
 ```
 
-**运行单个测试**: VSCode 扩展测试使用 Mocha，无法直接运行单个测试文件。需通过 VSCode 测试 UI 或修改 `src/test/suite/index.ts` 中的 glob 模式来指定测试文件。
+**运行单个测试文件**:
+```bash
+npm test test/providers/IssueProvider.test.ts
+```
+
+**运行单个测试用例**:
+```bash
+npm test -- -t "应该能够读取配置"
+```
 
 ### 打包
 ```bash
@@ -236,7 +246,7 @@ logger.separator(); // 分隔线
 
 ```
 src/
-├── extension.ts                 # 扩展入口，注册 providers
+├── extension.ts
 ├── types/
 │   └── cme-api.ts              # 主插件 API 类型定义
 ├── clients/
@@ -247,12 +257,14 @@ src/
 │   └── IntroductionStageProvider.ts # 引入阶段 Provider
 ├── utils/
 │   └── logger.ts                   # 日志工具（单例）
-└── test/
-    ├── runTest.ts                  # 测试运行器
-    └── suite/
-        ├── index.ts                # 测试套件入口
-        ├── IssueProvider.test.ts
-        └── IntroductionStageProvider.test.ts
+test/
+├── __mocks__/
+│   ├── vscode.ts                   # VSCode API Mock
+│   └── uuid.ts                     # UUID Mock
+├── providers/
+│   ├── IssueProvider.test.ts
+│   └── IntroductionStageProvider.test.ts
+└── setup.ts                        # Jest 全局设置
 ```
 
 ## Provider 开发规范
@@ -287,13 +299,20 @@ context.subscriptions.push(disposable);
 
 ### 测试结构
 
-使用 Mocha 测试框架，测试文件命名为 `*.test.ts`。
+使用 Jest 测试框架，测试文件命名为 `*.test.ts`，放置在 `test/` 目录下。
 
 ### 测试套件组织
 
 ```typescript
-suite('Provider Test Suite', () => {
-  suite('子套件名称', () => {
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+
+describe('Provider Test Suite', () => {
+  beforeEach(() => {
+    // 每个测试前清理状态
+    jest.clearAllMocks();
+  });
+
+  describe('子套件名称', () => {
     test('测试用例描述', () => {
       // 测试代码
     });
@@ -303,11 +322,13 @@ suite('Provider Test Suite', () => {
 
 ### 断言
 
-使用 Node.js `assert` 模块：
+使用 Jest `expect` 断言：
 ```typescript
-assert.ok(value); // 值为真
-assert.strictEqual(actual, expected); // 严格相等
-assert.fail('失败消息'); // 手动失败
+expect(value).toBeTruthy();          // 值为真
+expect(actual).toBe(expected);        // 严格相等
+expect(array).toHaveLength(3);        // 数组长度
+expect(str).toMatch(/pattern/);       // 正则匹配
+await expect(promise).rejects.toThrow(); // 异步错误
 ```
 
 ### 异步测试
@@ -315,7 +336,7 @@ assert.fail('失败消息'); // 手动失败
 ```typescript
 test('异步测试', async () => {
   const result = await asyncOperation();
-  assert.ok(result);
+  expect(result).toBeTruthy();
 });
 ```
 
@@ -324,10 +345,25 @@ test('异步测试', async () => {
 ```typescript
 try {
   await operation();
-  assert.fail('应该抛出错误');
+  throw new Error('应该抛出错误');
 } catch (error: any) {
-  assert.ok(error.message.includes('预期错误消息'));
+  expect(error.message).toMatch(/预期错误消息/);
 }
+```
+
+### VSCode API Mock
+
+测试在 Node.js 环境中运行，VSCode API 通过 manual mock 模拟（`test/__mocks__/vscode.ts`）。
+
+**使用 mock 配置**:
+```typescript
+import * as vscode from 'vscode';
+
+// 设置配置值
+(vscode.workspace as any).__setConfiguration('key', 'value');
+
+// 清空配置
+(vscode.workspace as any).__clearConfiguration();
 ```
 
 ## 配置管理

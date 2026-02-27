@@ -59,6 +59,10 @@ export const workspace = {
     };
   }),
   
+  onDidChangeConfiguration: jest.fn(() => {
+    return new Disposable(() => {});
+  }),
+  
   // 辅助方法：设置配置值（测试中使用）
   __setConfiguration: (key: string, value: any) => {
     mockConfigurations.set(key, value);

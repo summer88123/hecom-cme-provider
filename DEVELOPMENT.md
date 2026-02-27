@@ -1,83 +1,80 @@
-# 开发文档
+# 开发指南
 
-## 项目架构
+## 项目概述
 
-### 核心概念
+本项目是 `vscode-commit-message-editor` 主插件的扩展插件，实现了主插件的 `DynamicOptionsProvider` 接口，为提交消息编辑器提供动态数据源。
 
-本项目是 `vscode-commit-message-editor` 主插件的扩展插件，基于主插件的 **Dynamic Options Provider** 架构设计。
+### 架构设计
+
+根据主插件的 Provider 注册系统设计，本项目采用**独立 Provider 架构**：
+
+- 每个 Provider 独立实现 `DynamicOptionsProvider` 接口
+- Provider 之间完全解耦，互不依赖
+- 通过主插件的 `registerDynamicOptionsProvider` API 注册
+- 支持多个 Provider 并存
 
 **主插件设计文档**: `/Users/summer/Documents/GitHub/vscode-commit-message-editor/docs/plans/2026-02-26-dynamic-enum-provider-design.md`
 
-### 架构原则
+### 为什么采用独立 Provider 架构？
 
-1. **独立 Provider**: 每个 Provider 独立实现 `DynamicOptionsProvider` 接口
-2. **平级关系**: Provider 之间平级，互不依赖
-3. **统一注册**: 所有 Provider 通过主插件的 API 统一注册
-4. **标准接口**: 遵循主插件定义的接口规范
+1. **关注点分离**: 每个 Provider 专注于一个数据源
+2. **易于扩展**: 添加新 Provider 不影响现有功能
+3. **独立测试**: 每个 Provider 可以单独测试
+4. **灵活组合**: 用户可以选择性地启用/禁用 Provider
+5. **遵循设计模式**: 符合 VSCode 扩展生态的最佳实践
 
-### 核心文件
+## 项目结构
 
 ```
-src/
-├── extension.ts                               # 扩展入口，负责 Provider 注册
-├── types/
-│   └── cme-api.ts                             # 主插件 API 类型定义（临时）
-└── providers/
-    └── IssueProvider.ts            # 华为云 Issue Provider 实现
+hecom-cme-provider/
+├── src/
+│   ├── extension.ts                              # 扩展入口,注册所有 providers
+│   ├── types/
+│   │   └── cme-api.ts                            # 主插件 API 类型定义
+│   ├── clients/
+│   │   ├── ProjectManClientManager.ts            # 华为云客户端管理器
+│   │   └── UserInfoManager.ts                    # 用户信息管理器
+│   └── providers/
+│       ├── IssueProvider.ts                      # 华为云 Issue Provider
+│       └── IntroductionStageProvider.ts          # 引入阶段 Provider
+├── examples/
+│   └── introductionStageExample.ts               # 引入阶段使用示例
+├── out/                                          # 编译输出
+├── package.json
+├── tsconfig.json
+├── README.md
+└── DEVELOPMENT.md
 ```
 
-## Provider 接口
-
-### DynamicOptionsProvider
+## DynamicOptionsProvider 接口
 
 ```typescript
 interface DynamicOptionsProvider {
-  /**
-   * 提供选项数据
-   * @param context 上下文信息
-   * @returns 选项数组或 Promise
-   */
-  provideOptions(
-    context: DynamicOptionsContext
-  ): DynamicOptionItem[] | Promise<DynamicOptionItem[]>;
+  provideOptions(context: DynamicOptionsContext): 
+    DynamicOptionItem[] | Promise<DynamicOptionItem[]>;
 }
-```
 
-### DynamicOptionsContext
-
-```typescript
 interface DynamicOptionsContext {
-  /** 当前 Git 仓库路径 */
-  repositoryPath?: string;
-  
-  /** 其他 token 的当前值，支持联动 */
-  tokenValues: Record<string, string>;
-  
-  /** 取消令牌，用于处理长时间请求 */
-  cancellationToken?: vscode.CancellationToken;
+  repositoryPath?: string;              // 当前 Git 仓库路径
+  tokenValues: Record<string, string>;  // 其他 token 的当前值
+  cancellationToken?: CancellationToken; // 取消令牌
 }
-```
 
-### DynamicOptionItem
-
-```typescript
 interface DynamicOptionItem {
-  /** 显示标签 */
-  label: string;
-  
-  /** 选项值（可选，默认使用 label） */
-  value?: string;
-  
-  /** 描述信息（可选） */
-  description?: string;
+  label: string;       // 显示标签
+  value?: string;      // 选项值（默认使用 label）
+  description?: string; // 描述信息
 }
 ```
 
-## Provider 实现指南
+## 添加新的 Provider
 
-### 基本结构
+### 1. 创建 Provider 类
+
+在 `src/providers/` 目录下创建新的 Provider 文件：
 
 ```typescript
+// src/providers/MyProvider.ts
 import type {
   DynamicOptionsProvider,
   DynamicOptionsContext,
@@ -85,10 +82,6 @@ import type {
 } from '../types/cme-api';
 
 export class MyProvider implements DynamicOptionsProvider {
-  constructor() {
-    // 初始化逻辑
-  }
-
   async provideOptions(context: DynamicOptionsContext): Promise<DynamicOptionItem[]> {
     // 检查取消状态
     if (context.cancellationToken?.isCancellationRequested) {
@@ -117,30 +110,34 @@ export class MyProvider implements DynamicOptionsProvider {
 }
 ```
 
-### 注册 Provider
-
-在 `extension.ts` 中：
+### 2. 在 extension.ts 中注册
 
 ```typescript
+import { MyProvider } from './providers/MyProvider';
+
 export function activate(context: vscode.ExtensionContext) {
-  // 获取主插件 API
-  const cmeExtension = vscode.extensions.getExtension('hecom.hecom-commit-message-editor');
+  // ... 其他代码
   
-  const registerProviders = async () => {
-    const api = await cmeExtension.activate();
-    
-    // 创建并注册 Provider
-    const myProvider = new MyProvider();
-    const disposable = api.registerDynamicOptionsProvider(
-      'hecom.my-provider',  // Provider ID（必须唯一）
-      myProvider
-    );
-    
-    // 添加到订阅列表，确保正确清理
-    context.subscriptions.push(disposable);
-  };
-  
-  registerProviders();
+  const myProvider = new MyProvider();
+  const disposable = api.registerDynamicOptionsProvider(
+    'hecom.my-provider',  // Provider ID
+    myProvider
+  );
+  context.subscriptions.push(disposable);
+}
+```
+
+### 3. 在主插件配置中使用
+
+```json
+{
+  "commit-message-editor.tokens": [
+    {
+      "name": "myField",
+      "type": "dynamic-enum",
+      "provider": "hecom.my-provider"
+    }
+  ]
 }
 ```
 
@@ -157,6 +154,170 @@ export function activate(context: vscode.ExtensionContext) {
 - 必须全局唯一
 - 使用小写字母和连字符
 - 前缀使用发布者 ID
+
+## 开发工作流
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 编译
+
+```bash
+npm run compile        # 编译
+npm run watch          # 监视模式
+```
+
+### 测试
+
+```bash
+npm test              # 运行测试
+```
+
+详细的测试文档请查看 [docs/TESTING.md](docs/TESTING.md)
+
+**测试覆盖**:
+- ✅ IntroductionStageProvider: 36 个测试用例
+- ✅ IssueProvider: 完整的单元测试
+- ✅ 配置管理、数据转换、错误处理、边界情况
+
+### 调试
+
+1. 按 F5 启动扩展开发主机
+2. 打开开发者工具（帮助 → 切换开发人员工具）
+3. 查看控制台输出和网络请求
+4. 在 Provider 代码中添加断点
+
+### 打包
+
+```bash
+npm install -g @vscode/vsce
+vsce package
+```
+
+## 架构说明
+
+### Provider 注册流程
+
+```
+扩展激活
+  ↓
+获取主插件 API
+  ↓
+创建 Provider 实例
+  ↓
+调用 registerDynamicOptionsProvider
+  ↓
+主插件将 Provider 加入注册表
+  ↓
+用户打开编辑器时，主插件调用 provideOptions
+```
+
+### 与主插件的关系
+
+```
+vscode-commit-message-editor (主插件)
+    ├── 提供 API: registerDynamicOptionsProvider
+    ├── 管理 Provider 注册表
+    ├── 处理 Provider 调用和缓存
+    └── 渲染 UI 和错误处理
+
+hecom-cme-provider (本扩展)
+    ├── 实现 DynamicOptionsProvider 接口
+    ├── 注册 Provider 到主插件
+    └── 提供具体的业务数据
+```
+
+### 数据流
+
+```
+用户打开编辑器
+  ↓
+用户点击 dynamic-enum 字段
+  ↓
+主插件触发加载
+  ↓
+主插件创建 context
+  ↓
+主插件调用 provider.provideOptions(context)
+  ↓
+Provider 返回选项数组
+  ↓
+主插件缓存结果
+  ↓
+主插件渲染选项列表
+```
+
+## Provider 实现细节
+
+### 华为云 CodeArts Issue Provider
+
+**Provider ID**: `hecom.huawei-cloud-issues`
+
+**实现文件**: `src/providers/IssueProvider.ts`
+
+**功能**: 从华为云 CodeArts 项目中获取 Issue 列表
+
+**返回格式**:
+```typescript
+{
+  label: "[Bug] 修复登录问题",
+  value: "修复登录问题: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/{projectId}/task/detail/{issueId}",
+  description: "[进行中]"
+}
+```
+
+**错误处理**:
+- 配置不完整时抛出错误提示
+- 网络错误时自动重试
+- 支持取消长时间请求
+
+### 引入阶段 Provider
+
+**Provider ID**: `hecom.introduction-stage`
+
+**实现文件**: `src/providers/IntroductionStageProvider.ts`
+
+**功能**: 从华为云 CodeArts 项目中获取"引入阶段"自定义字段的选项列表
+
+**API 返回格式示例**:
+```json
+{
+  "datas": [
+    {
+      "custom_field": "custom_field29",
+      "type": "radio",
+      "name": "引入阶段",
+      "options": "2501,2502,2503,2504,2505,2506,2507,2508,历史版本,2509,2510,2511,2512,2601,2602,2603,2604,2605,2607",
+      "tracker_ids": [3],
+      "create_time": "2025-09-09T14:39:28+08:00"
+    }
+  ]
+}
+```
+
+**转换后的选项格式**:
+```typescript
+{
+  label: "2501",
+  value: "2501",
+  description: "引入阶段: 2501"
+}
+```
+
+**配置要求**: 
+- 需要配置华为云 AK/SK/DomainId/ProjectId
+- 项目中需要存在名为"引入阶段"的自定义字段
+- 自动处理逗号分隔的字符串选项
+
+**错误处理**:
+- 配置不完整时抛出错误提示
+- 字段不存在时返回空列表
+- 自动识别字符串或数组类型的 options
+- 网络错误时自动重试
+- 支持取消长时间请求
 
 ## 配置管理
 
@@ -348,106 +509,31 @@ console.error('[MyProvider] Error:', error);
 
 在开发者工具（帮助 → 切换开发人员工具）的 Network 标签中查看 HTTP 请求。
 
-## 与主插件的集成
+## 常见问题
 
-### 注册流程
+### Q: Provider 未注册成功？
 
-```
-扩展激活
-  ↓
-获取主插件扩展对象
-  ↓
-等待主插件激活
-  ↓
-获取主插件 API
-  ↓
-创建 Provider 实例
-  ↓
-调用 registerDynamicOptionsProvider
-  ↓
-主插件将 Provider 加入注册表
-  ↓
-返回 Disposable 对象
-  ↓
-加入 subscriptions
-```
+A: 检查：
+1. 主插件是否已安装并激活
+2. 主插件版本是否支持 `DynamicOptionsProvider` API
+3. Provider ID 是否唯一
+4. 查看 VSCode 开发者工具的错误信息
 
-### 数据流
+### Q: Issue 列表为空？
 
-```
-用户打开编辑器
-  ↓
-用户点击 dynamic-enum 字段
-  ↓
-主插件触发加载
-  ↓
-主插件创建 context
-  ↓
-主插件调用 provider.provideOptions(context)
-  ↓
-Provider 返回选项数组
-  ↓
-主插件缓存结果
-  ↓
-主插件渲染选项列表
-```
+A: 检查：
+1. 华为云配置是否正确（AK/SK/ProjectId/Region）
+2. 网络连接是否正常
+3. ProjectId 是否有权限访问
+4. 查看控制台日志获取详细错误信息
 
-### 配置关联
+### Q: 如何处理敏感信息（AK/SK）？
 
-在主插件配置中引用 Provider：
-
-```json
-{
-  "commit-message-editor.tokens": [
-    {
-      "name": "issue",
-      "type": "dynamic-enum",
-      "provider": "hecom.huawei-cloud-issues",
-      "description": "选择关联的 Issue"
-    }
-  ]
-}
-```
-
-## 故障排除
-
-### Provider 未注册
-
-**症状**: 控制台没有 "Provider 注册成功" 日志
-
-**排查**:
-1. 检查主插件是否已安装
-2. 检查主插件版本是否支持 API
-3. 查看是否有异常抛出
-
-### 选项未加载
-
-**症状**: 下拉框为空或显示错误
-
-**排查**:
-1. 查看控制台错误日志
-2. 检查配置是否正确
-3. 验证网络连接
-4. 检查 Provider ID 是否匹配
-
-### 加载缓慢
-
-**症状**: 点击后长时间无响应
-
-**排查**:
-1. 检查网络请求耗时
-2. 优化数据获取逻辑
-3. 考虑添加缓存
-4. 减少返回数据量
-
-### 类型错误
-
-**症状**: TypeScript 编译错误
-
-**解决**:
-1. 确保 `types/cme-api.ts` 存在
-2. 确保类型定义与主插件一致
-3. 运行 `npm run compile` 验证
+A:
+1. 不要将 AK/SK 提交到代码仓库
+2. 使用 VSCode 的 Settings（用户设置或工作区设置）
+3. 生产环境建议使用 VSCode SecretStorage API
+4. 考虑从环境变量读取凭证
 
 ## 发布流程
 
@@ -505,9 +591,24 @@ vsce publish
 3. **数据分页**: 对大量数据进行分页
 4. **缓存利用**: 利用主插件的缓存机制
 
+## 安全考虑
+
+- Provider 代码在 VSCode 扩展沙箱中运行
+- 敏感信息（API Token）通过配置管理，不暴露在代码中
+- 支持从环境变量读取凭证
+- 建议使用 VSCode SecretStorage API 存储敏感信息
+
 ## 参考资源
 
 - [VSCode 扩展 API](https://code.visualstudio.com/api)
 - [主插件设计文档](/Users/summer/Documents/GitHub/vscode-commit-message-editor/docs/plans/2026-02-26-dynamic-enum-provider-design.md)
 - [TypeScript 文档](https://www.typescriptlang.org/docs/)
 - [华为云 SDK](https://github.com/huaweicloud/huaweicloud-sdk-nodejs-v3)
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 许可证
+
+MIT

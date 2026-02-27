@@ -70,12 +70,6 @@ export function activate(context: vscode.ExtensionContext) {
         introductionStageProvider
       );
       context.subscriptions.push(introductionStageProviderDisposable);
-      
-      vscode.window.showInformationMessage('Hecom CME Provider 已成功注册');
-
-      // 自动显示输出面板（可选）
-      // logger.show();
-
     } catch (error) {
       logger.error('Extension', '注册 Hecom CME Provider 失败', error);
       vscode.window.showErrorMessage(

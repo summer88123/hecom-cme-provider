@@ -1,7 +1,7 @@
 {
   "// 说明": "这是配置示例文件，复制到 settings.json 并填入实际值",
   "// 注意": "不要将包含真实 AK/SK 的配置提交到代码仓库",
-  
+
   "// 华为云 CodeArts 配置": "以下配置用于 Issue Provider",
   "hecomCmeProvider.huaweiCloud.accessKey": "",
   "hecomCmeProvider.huaweiCloud.secretKey": "",
@@ -10,7 +10,7 @@
   "hecomCmeProvider.huaweiCloud.projectId": "",
   "// projectId 说明": "CodeArts 项目 ID，用于查询 Issue 数据",
   "hecomCmeProvider.huaweiCloud.region": "cn-north-4",
-  
+
   "// 主插件配置示例": "以下是在主插件中使用 Provider 的配置",
   "commit-message-editor.tokens": [
     {

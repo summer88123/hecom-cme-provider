@@ -88,7 +88,8 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
         optionValues = fieldData.options
           .split(',')
           .map((opt: string) => opt.trim())
-          .filter((opt: string) => opt.length > 0);
+          .filter((opt: string) => opt.length > 0)
+          .sort((a: string, b: string) => b.localeCompare(a));
       } else if (Array.isArray(fieldData.options)) {
         // 如果已经是数组,直接使用
         optionValues = fieldData.options;

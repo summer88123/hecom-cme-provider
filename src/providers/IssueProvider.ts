@@ -54,7 +54,7 @@ export class IssueProvider implements DynamicOptionsProvider {
       request.projectId = projectId;
 
       const body = new ListIssueRequestV4();
-      body.limit = 60; // 设置返回的 Issue 数量上限，避免一次性拉取过多数据
+      body.limit = 50; // 设置返回的 Issue 数量上限，避免一次性拉取过多数据
       const userId = this.userInfoManager.getUserId();
       body.assignedIds = userId ? [userId] : []; // 只获取分配给当前用户的 Issue
 

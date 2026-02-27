@@ -1,5 +1,5 @@
-import { ListWorkTableIssueRequestV4RequestBody } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListWorkTableIssueRequestV4RequestBody';
-import { SearchIssuesRequest } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/SearchIssuesRequest';
+import { ListIssueRequestV4 } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListIssueRequestV4';
+import { ListIssuesV4Request } from '@huaweicloud/huaweicloud-sdk-projectman/v4/model/ListIssuesV4Request';
 import { ProjectManClientManager } from '../clients/ProjectManClientManager';
 import { UserInfoManager } from '../clients/UserInfoManager';
 import type {
@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 
 /**
  * 华为云 CodeArts Issue Provider
- * 
+ *
  * 实现 DynamicOptionsProvider 接口，从华为云 CodeArts 获取 Issue 列表
  */
 export class IssueProvider implements DynamicOptionsProvider {
@@ -36,7 +36,7 @@ export class IssueProvider implements DynamicOptionsProvider {
 
     const client = this.clientManager.getClient();
     const projectId = this.userInfoManager.getProjectId();
-    
+
     if (!client || !projectId) {
       const error = '华为云配置不完整，请在设置中配置 AK/SK、DomainId 和 ProjectId';
       logger.error('IssueProvider', error);
@@ -50,49 +50,58 @@ export class IssueProvider implements DynamicOptionsProvider {
     }
 
     try {
-      const request = new SearchIssuesRequest();
-      const body = new ListWorkTableIssueRequestV4RequestBody();
-      
-      // 设置分页和基本查询参数
-      body.withOffset(0);
-      body.withLimit(100);
-      
-      // 可以根据需要添加更多过滤条件
-      body.withStatusId("1,15,2,13");  // 只查询待处理的状态
-      body.withTrackerId("2,3");       // 查询 bug 和 task 类型的 Issue
-      
+      const request = new ListIssuesV4Request();
+      request.projectId = projectId;
+
+      const body = new ListIssueRequestV4();
+
+      // 设置 tracker IDs (2=bug, 3=task)
+      const trackerIds = [2, 3];
+      body.withTrackerIds(trackerIds);
+
+      // 设置 status IDs (1=新建, 2=处理中, 15=已解决, 13=已拒绝)
+      const statusIds = [1, 2, 15, 13];
+      body.withStatusIds(statusIds);
+
       request.withBody(body);
 
-      const response = await client.searchIssues(request);
+      const response = await client.listIssuesV4(request);
 
       // @ts-ignore
-      if (!response || !response.issue_list) {
+      if (!response || !response.issues) {
         logger.warn('IssueProvider', '未获取到 Issue 数据');
         return [];
       }
 
-      // 转换为 DynamicOptionItem 格式 
-      //  @ts-ignore
-      const issues = response.issue_list;
+      // @ts-ignore
+      const issues = response.issues;
       logger.info('IssueProvider', `获取到 Issue 数量: ${issues.length}`);
 
-      const options: DynamicOptionItem[] = issues.map((issue: any) => {
-        const subject = issue.subject || '无标题';
+      const options: DynamicOptionItem[] = issues.map((issue) => {
+        const subject = issue.name || '无标题';
         const statusName = issue.status?.name || '';
         const trackerName = issue.tracker?.name || '';
-        const description = `[${statusName}]`;
-        
+
+        // 处理自定义字段，拼接到 value 上
+        const bugType = // @ts-ignore - 华为云 SDK 的类型定义可能不完整
+          issue.new_custom_fields?.find((field) => field.field_name === '缺陷类型')?.value;
+        const isCustomerFeedback = bugType === '客户反馈';
+
+        const issueUrl = `https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/${projectId}/task/detail/${issue.id}`;
+
         return {
-          label: `[${trackerName}] ${subject}`,
-          value: `${subject}: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/${projectId}/task/detail/${issue.id} `,
-          description: description,
+          label: `[${isCustomerFeedback ? bugType : trackerName}] ${subject}`,
+          value: `${isCustomerFeedback ? `[${bugType}] ` : ''}${subject}: ${issueUrl}`,
+          description: `[${statusName}]`,
         };
       });
 
       return options;
     } catch (error) {
       logger.error('IssueProvider', '获取 Issue 列表失败', error);
-      throw new Error(`获取 Issue 列表失败: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `获取 Issue 列表失败: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

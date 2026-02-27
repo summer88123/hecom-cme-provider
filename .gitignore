@@ -4,5 +4,8 @@ node_modules
 .vscode-test/
 *.vsix
 .DS_Store
-coverage/
 .vscode/settings.json
+
+# Jest 覆盖率报告
+coverage/
+*.lcov

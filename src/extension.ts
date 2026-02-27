@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ProjectManClientManager } from './clients/ProjectManClientManager';
 import { UserInfoManager } from './clients/UserInfoManager';
-import { IssueProvider } from './providers/IssueProvider';
 import { IntroductionStageProvider } from './providers/IntroductionStageProvider';
+import { IssueProvider } from './providers/IssueProvider';
 import { logger } from './utils/logger';
 
 /**
@@ -46,14 +46,20 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      ProjectManClientManager.getInstance();
-
+      const client = ProjectManClientManager.getInstance();
       const userInfoManager = UserInfoManager.getInstance();
-      try {
-        await userInfoManager.initialize();
-      } catch (error) {
-        logger.warn('Extension', '用户信息初始化失败，但插件将继续运行', error);
-      }
+
+      // 监听配置变更
+      vscode.workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration('hecomCmeProvider.huaweiCloud')) {
+          logger.info('IssueProvider', '检测到配置变更，重新初始化');
+          await client.initializeFromConfig();
+          await userInfoManager.initialize();
+        }
+      });
+
+      await client.initializeFromConfig();
+      await userInfoManager.initialize();
 
       // 注册 Issue Provider
       const issueProvider = new IssueProvider();

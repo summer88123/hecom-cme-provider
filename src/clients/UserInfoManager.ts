@@ -7,7 +7,7 @@ import { ProjectManClientManager } from './ProjectManClientManager';
  * 用户信息接口
  */
 export interface UserInfo {
-  userId: string;
+  userId: number;
   userName: string;
   nickName: string;
   domainId: string;
@@ -116,7 +116,7 @@ export class UserInfoManager {
   /**
    * 获取用户 ID
    */
-  public getUserId(): string | undefined {
+  public getUserId(): number | undefined {
     return this.userInfo?.userId;
   }
 

@@ -54,6 +54,9 @@ export class IssueProvider implements DynamicOptionsProvider {
       request.projectId = projectId;
 
       const body = new ListIssueRequestV4();
+      body.limit = 60; // 设置返回的 Issue 数量上限，避免一次性拉取过多数据
+      const userId = this.userInfoManager.getUserId();
+      body.assignedIds = userId ? [userId] : []; // 只获取分配给当前用户的 Issue
 
       // 设置 tracker IDs (2=bug, 3=task)
       const trackerIds = [2, 3];
@@ -79,7 +82,6 @@ export class IssueProvider implements DynamicOptionsProvider {
 
       const options: DynamicOptionItem[] = issues.map((issue) => {
         const subject = issue.name || '无标题';
-        const statusName = issue.status?.name || '';
         const trackerName = issue.tracker?.name || '';
 
         // 处理自定义字段，拼接到 value 上
@@ -92,7 +94,6 @@ export class IssueProvider implements DynamicOptionsProvider {
         return {
           label: `[${isCustomerFeedback ? bugType : trackerName}] ${subject}`,
           value: `${isCustomerFeedback ? `[${bugType}] ` : ''}${subject}: ${issueUrl}`,
-          description: `[${statusName}]`,
         };
       });
 

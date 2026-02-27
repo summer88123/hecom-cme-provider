@@ -1,7 +1,7 @@
 {
   "name": "hecom-cme-provider",
   "displayName": "Hecom CME Provider",
-  "description": "为 Commit Message Editor 提供基于内部业务场景的 provider",
+  "description": "为 Hecom Commit Message Editor 提供基于内部业务场景的 provider",
   "version": "0.0.1",
   "publisher": "hecom",
   "repository": {
@@ -23,15 +23,20 @@
     "configuration": {
       "title": "Hecom CME Provider",
       "properties": {
+        "hecomCmeProvider.huaweiCloud.credentialsFile": {
+          "type": "string",
+          "default": "",
+          "description": "华为云凭证配置文件路径。文件必须是 JSON 格式，包含 ak 和 sk 字段。如果设置此项，将优先使用文件中的凭证，accessKey 和 secretKey 配置将被忽略。"
+        },
         "hecomCmeProvider.huaweiCloud.accessKey": {
           "type": "string",
           "default": "",
-          "description": "华为云 AccessKey (AK)"
+          "description": "华为云 AccessKey (AK)，如果设置了 credentialsFile 将被忽略"
         },
         "hecomCmeProvider.huaweiCloud.secretKey": {
           "type": "string",
           "default": "",
-          "description": "华为云 SecretKey (SK)"
+          "description": "华为云 SecretKey (SK)，如果设置了 credentialsFile 将被忽略"
         },
         "hecomCmeProvider.huaweiCloud.domainId": {
           "type": "string",

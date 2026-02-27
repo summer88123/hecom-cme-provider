@@ -3,6 +3,7 @@ import { ProjectManClient } from '@huaweicloud/huaweicloud-sdk-projectman/v4/Pro
 import { ProjectManRegion } from '@huaweicloud/huaweicloud-sdk-projectman/v4/ProjectManRegion';
 import * as vscode from 'vscode';
 import { logger } from '../utils/logger';
+import { getCredentials } from '../utils/credentialsLoader';
 
 /**
  * ProjectMan 客户端配置接口
@@ -26,14 +27,6 @@ export class ProjectManClientManager {
 
   private constructor() {
     // 私有构造函数，防止外部实例化
-    this.initializeFromConfig();
-    // 监听配置变更
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('hecomCmeProvider.huaweiCloud')) {
-        logger.info('IssueProvider', '检测到配置变更，重新初始化');
-        this.initializeFromConfig();
-      }
-    });
   }
 
   /**
@@ -94,24 +87,36 @@ export class ProjectManClientManager {
   /**
    * 从 VSCode 配置初始化客户端
    */
-  private initializeFromConfig(): void {
-    logger.info('ClientManager', '从 VSCode 配置读取参数...');
+  public async initializeFromConfig(): Promise<void> {
+    logger.info('ClientManager', '从配置读取参数...');
     const config = vscode.workspace.getConfiguration('hecomCmeProvider');
-    const ak = config.get<string>('huaweiCloud.accessKey');
-    const sk = config.get<string>('huaweiCloud.secretKey');
+
+    // 优先从配置文件读取凭证，如果没有配置文件则从 VSCode 配置读取
+    const credentials = await getCredentials();
+
+    if (!credentials) {
+      logger.warn(
+        'ClientManager',
+        '华为云凭证配置不完整，请在设置中配置 credentialsFile 或 AK/SK',
+      );
+      this.client = undefined;
+      this.currentConfig = undefined;
+      return;
+    }
+
     const domainId = config.get<string>('huaweiCloud.domainId');
     const region = config.get<string>('huaweiCloud.region', 'cn-north-4');
 
-    if (!ak || !sk || !domainId) {
-      logger.warn('ClientManager', '华为云配置不完整，请在设置中配置 AK/SK 和 DomainId');
+    if (!domainId) {
+      logger.warn('ClientManager', '华为云配置不完整，请在设置中配置 DomainId');
       this.client = undefined;
       this.currentConfig = undefined;
       return;
     }
 
     this.initialize({
-      accessKey: ak,
-      secretKey: sk,
+      accessKey: credentials.accessKey,
+      secretKey: credentials.secretKey,
       domainId: domainId,
       region: region,
     });

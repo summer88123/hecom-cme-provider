@@ -1,0 +1,38 @@
+# VSCode 插件打包忽略文件
+# 这些文件和目录不会被打包到 .vsix 文件中
+
+# 源代码目录（编译后的代码在 out 目录）
+src/**
+!src/types/**
+
+# 测试文件
+out/test/**
+out/**/*.map
+
+# 开发依赖文件
+.vscode/**
+.vscode-test/**
+.gitignore
+.eslintrc.json
+tsconfig.json
+
+# 文档文件（可选，如果想保留可以注释掉）
+docs/**
+examples/**
+DEVELOPMENT.md
+MIGRATION.md
+QUICKSTART.md
+
+# Git 相关
+.git/**
+.github/**
+
+# 依赖文件 - 保留 node_modules（生产依赖必需）
+# VSCode 会自动打包 dependencies，但不会打包 devDependencies
+
+# 日志和临时文件
+*.log
+*.vsix
+
+# 其他
+.DS_Store

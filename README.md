@@ -8,7 +8,7 @@
 
 ### 架构设计
 
-根据主插件的 Provider 注册系统设计（参考：[动态 Enum Provider 设计文档](/Users/summer/Documents/GitHub/vscode-commit-message-editor/docs/plans/2026-02-26-dynamic-enum-provider-design.md)），本项目采用**独立 Provider 架构**：
+根据主插件的 Provider 注册系统设计，本项目采用**独立 Provider 架构**：
 
 - 每个 Provider 独立实现 `DynamicOptionsProvider` 接口
 - Provider 之间完全解耦，互不依赖

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectManClientManager } from './clients/ProjectManClientManager';
 import { UserInfoManager } from './clients/UserInfoManager';
 import { IssueProvider } from './providers/IssueProvider';
+import { IntroductionStageProvider } from './providers/IntroductionStageProvider';
 import { logger } from './utils/logger';
 
 /**
@@ -53,12 +54,23 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         logger.warn('Extension', '用户信息初始化失败，但插件将继续运行', error);
       }
+      
+      // 注册 Issue Provider
       const issueProvider = new IssueProvider();
       const issueProviderDisposable = api.registerDynamicOptionsProvider(
         'hecom.huawei-cloud-issues',
         issueProvider
       );
       context.subscriptions.push(issueProviderDisposable);
+      
+      // 注册引入阶段 Provider
+      const introductionStageProvider = new IntroductionStageProvider();
+      const introductionStageProviderDisposable = api.registerDynamicOptionsProvider(
+        'hecom.introduction-stage',
+        introductionStageProvider
+      );
+      context.subscriptions.push(introductionStageProviderDisposable);
+      
       vscode.window.showInformationMessage('Hecom CME Provider 已成功注册');
 
       // 自动显示输出面板（可选）

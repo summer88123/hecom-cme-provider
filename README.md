@@ -18,6 +18,7 @@
 ## 功能特性
 
 - 🔗 **华为云 CodeArts Issue Provider**: 从华为云 CodeArts 获取 Issue 列表
+- 🎯 **引入阶段 Provider**: 从华为云 CodeArts 获取"引入阶段"自定义字段选项
 - ✨ **标准接口**: 实现主插件的 `DynamicOptionsProvider` 接口
 - 🔄 **动态加载**: 支持延迟加载和会话级缓存
 - ⚡ **高性能**: 支持取消令牌和超时控制
@@ -89,6 +90,13 @@
       "type": "dynamic-enum",
       "provider": "hecom.huawei-cloud-issues",
       "description": "选择关联的华为云 CodeArts Issue"
+    },
+    {
+      "label": "引入阶段",
+      "name": "introduction-stage",
+      "type": "dynamic-enum",
+      "provider": "hecom.introduction-stage",
+      "description": "选择引入阶段"
     }
   ]
 }
@@ -105,14 +113,57 @@
 **返回格式**:
 ```typescript
 {
-  label: "#123",
-  value: "123",
-  description: "修复登录问题 [进行中]"
+  label: "[Bug] 修复登录问题",
+  value: "修复登录问题: https://devcloud.cn-north-4.huaweicloud.com/projectman/scrum/{projectId}/task/detail/{issueId}",
+  description: "[进行中]"
 }
 ```
 
 **错误处理**:
 - 配置不完整时抛出错误提示
+- 网络错误时自动重试
+- 支持取消长时间请求
+
+### 引入阶段 Provider
+
+**Provider ID**: `hecom.introduction-stage`
+
+**功能**: 从华为云 CodeArts 项目中获取"引入阶段"自定义字段的选项列表
+
+**API 返回格式示例**:
+```json
+{
+  "datas": [
+    {
+      "custom_field": "custom_field29",
+      "type": "radio",
+      "name": "引入阶段",
+      "options": "2501,2502,2503,2504,2505,2506,2507,2508,历史版本,2509,2510,2511,2512,2601,2602,2603,2604,2605,2607",
+      "tracker_ids": [3],
+      "create_time": "2025-09-09T14:39:28+08:00"
+    }
+  ]
+}
+```
+
+**转换后的选项格式**:
+```typescript
+{
+  label: "2501",
+  value: "2501",
+  description: "引入阶段: 2501"
+}
+```
+
+**配置要求**: 
+- 需要配置华为云 AK/SK/DomainId/ProjectId
+- 项目中需要存在名为"引入阶段"的自定义字段
+- 自动处理逗号分隔的字符串选项
+
+**错误处理**:
+- 配置不完整时抛出错误提示
+- 字段不存在时返回空列表
+- 自动识别字符串或数组类型的 options
 - 网络错误时自动重试
 - 支持取消长时间请求
 
@@ -123,12 +174,18 @@
 ```
 hecom-cme-provider/
 ├── src/
-│   ├── extension.ts                              # 扩展入口，注册所有 providers
+│   ├── extension.ts                              # 扩展入口,注册所有 providers
 │   ├── types/
 │   │   └── cme-api.ts                            # 主插件 API 类型定义
+│   ├── clients/
+│   │   ├── ProjectManClientManager.ts            # 华为云客户端管理器
+│   │   └── UserInfoManager.ts                    # 用户信息管理器
 │   └── providers/
-│       └── IssueProvider.ts           # 华为云 Issue Provider
-├── out/                                           # 编译输出
+│       ├── IssueProvider.ts                      # 华为云 Issue Provider
+│       └── IntroductionStageProvider.ts          # 引入阶段 Provider
+├── examples/
+│   └── introductionStageExample.ts               # 引入阶段使用示例
+├── out/                                          # 编译输出
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -226,6 +283,13 @@ npm run watch          # 监视模式
 ```bash
 npm test              # 运行测试
 ```
+
+详细的测试文档请查看 [docs/TESTING.md](docs/TESTING.md)
+
+**测试覆盖**:
+- ✅ IntroductionStageProvider: 36 个测试用例
+- ✅ IssueProvider: 完整的单元测试
+- ✅ 配置管理、数据转换、错误处理、边界情况
 
 ### 打包
 

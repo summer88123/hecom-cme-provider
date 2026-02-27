@@ -4,11 +4,11 @@
 
 ## 简介
 
-本项目是 `vscode-commit-message-editor` 主插件的扩展插件，为提交消息编辑器提供动态数据源。
+本项目是 [Hecom Commit Message Editor](https://marketplace.visualstudio.com/items?itemName=hecom.hecom-commit-message-editor) 主插件的扩展插件，为提交消息编辑器提供动态数据源。
 
 ## 功能特性
 
-- 🔗 **华为云 CodeArts Issue Provider**: 从华为云 CodeArts 获取 Issue 列表
+- 🔗 **Issue Provider**: 从华为云 CodeArts 获取 Issue 列表
 - 🎯 **引入阶段 Provider**: 从华为云 CodeArts 获取"引入阶段"自定义字段选项
 
 ## 使用方法

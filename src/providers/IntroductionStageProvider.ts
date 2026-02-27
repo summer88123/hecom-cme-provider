@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 
 /**
  * 引入阶段 Provider
- * 
+ *
  * 从华为云 CodeArts 获取"引入阶段"自定义字段的选项列表
  */
 export class IntroductionStageProvider implements DynamicOptionsProvider {
@@ -36,7 +36,7 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
 
     const client = this.clientManager.getClient();
     const projectId = this.userInfoManager.getProjectId();
-    
+
     if (!client || !projectId) {
       const error = '华为云配置不完整,请在设置中配置 AK/SK、DomainId 和 ProjectId';
       logger.error('IntroductionStageProvider', error);
@@ -52,9 +52,9 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
     try {
       const request = new ListIssueCustomFieldsRequest();
       request.projectId = projectId;
-      
+
       const body = new ListIssueCustomFieldsRequestBody();
-      const fieldNames = ["引入阶段"];
+      const fieldNames = ['引入阶段'];
       body.withNames(fieldNames);
       request.withBody(body);
 
@@ -69,14 +69,14 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
 
       // @ts-ignore
       const fieldData = response.datas[0];
-      
-      logger.info('IntroductionStageProvider', '字段数据', { 
+
+      logger.info('IntroductionStageProvider', '字段数据', {
         name: fieldData.name,
         type: fieldData.type,
         optionsType: typeof fieldData.options,
-        options: fieldData.options 
+        options: fieldData.options,
       });
-      
+
       if (!fieldData.options) {
         logger.warn('IntroductionStageProvider', '引入阶段字段没有可用选项');
         return [];
@@ -85,12 +85,17 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
       // options 是逗号分隔的字符串,需要分割成数组
       let optionValues: string[];
       if (typeof fieldData.options === 'string') {
-        optionValues = fieldData.options.split(',').map((opt: string) => opt.trim()).filter((opt: string) => opt.length > 0);
+        optionValues = fieldData.options
+          .split(',')
+          .map((opt: string) => opt.trim())
+          .filter((opt: string) => opt.length > 0);
       } else if (Array.isArray(fieldData.options)) {
         // 如果已经是数组,直接使用
         optionValues = fieldData.options;
       } else {
-        logger.warn('IntroductionStageProvider', '无法识别的 options 类型', { type: typeof fieldData.options });
+        logger.warn('IntroductionStageProvider', '无法识别的 options 类型', {
+          type: typeof fieldData.options,
+        });
         return [];
       }
 
@@ -110,11 +115,15 @@ export class IntroductionStageProvider implements DynamicOptionsProvider {
         };
       });
 
-      logger.success('IntroductionStageProvider', '成功获取引入阶段选项', { count: options.length });
+      logger.success('IntroductionStageProvider', '成功获取引入阶段选项', {
+        count: options.length,
+      });
       return options;
     } catch (error) {
       logger.error('IntroductionStageProvider', '获取引入阶段选项失败', error);
-      throw new Error(`获取引入阶段选项失败: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `获取引入阶段选项失败: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

@@ -21,7 +21,7 @@ export interface UserInfo {
 
 /**
  * 用户信息管理器（单例模式）
- * 
+ *
  * 负责在插件初始化时读取当前用户信息，并提供全局访问接口
  * 同时管理 projectId（业务使用的项目 ID）
  */
@@ -48,8 +48,8 @@ export class UserInfoManager {
   /**
    * 初始化用户信息
    * 从华为云 ProjectMan API 读取当前用户信息
-   * 
-   * 
+   *
+   *
    */
   public async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -63,7 +63,7 @@ export class UserInfoManager {
       // 从配置读取 projectId
       const config = vscode.workspace.getConfiguration('hecomCmeProvider');
       this.projectId = config.get<string>('huaweiCloud.projectId');
-      
+
       // 获取客户端
       const clientManager = ProjectManClientManager.getInstance();
       const client = clientManager.getClient();

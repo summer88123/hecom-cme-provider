@@ -32,7 +32,7 @@ class Logger {
   public info(tag: string, message: string, data?: any) {
     const timestamp = new Date().toLocaleTimeString();
     let logMessage = `[${timestamp}] [${tag}] ${message}`;
-    
+
     if (data !== undefined) {
       if (typeof data === 'object') {
         logMessage += '\n' + JSON.stringify(data, null, 2);
@@ -40,7 +40,7 @@ class Logger {
         logMessage += ` ${data}`;
       }
     }
-    
+
     this.outputChannel.appendLine(logMessage);
   }
 
@@ -50,7 +50,7 @@ class Logger {
   public warn(tag: string, message: string, data?: any) {
     const timestamp = new Date().toLocaleTimeString();
     let logMessage = `[${timestamp}] [${tag}] ⚠️  ${message}`;
-    
+
     if (data !== undefined) {
       if (typeof data === 'object') {
         logMessage += '\n' + JSON.stringify(data, null, 2);
@@ -58,7 +58,7 @@ class Logger {
         logMessage += ` ${data}`;
       }
     }
-    
+
     this.outputChannel.appendLine(logMessage);
   }
 
@@ -68,7 +68,7 @@ class Logger {
   public error(tag: string, message: string, error?: any) {
     const timestamp = new Date().toLocaleTimeString();
     let logMessage = `[${timestamp}] [${tag}] ❌ ${message}`;
-    
+
     if (error !== undefined) {
       if (error instanceof Error) {
         logMessage += `\n  错误: ${error.message}`;
@@ -81,7 +81,7 @@ class Logger {
         logMessage += ` ${error}`;
       }
     }
-    
+
     this.outputChannel.appendLine(logMessage);
   }
 
@@ -91,7 +91,7 @@ class Logger {
   public success(tag: string, message: string, data?: any) {
     const timestamp = new Date().toLocaleTimeString();
     let logMessage = `[${timestamp}] [${tag}] ✅ ${message}`;
-    
+
     if (data !== undefined) {
       if (typeof data === 'object') {
         logMessage += '\n' + JSON.stringify(data, null, 2);
@@ -99,7 +99,7 @@ class Logger {
         logMessage += ` ${data}`;
       }
     }
-    
+
     this.outputChannel.appendLine(logMessage);
   }
 

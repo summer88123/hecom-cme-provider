@@ -16,7 +16,7 @@ export interface ProjectManClientConfig {
 
 /**
  * ProjectMan 客户端管理器（单例模式）
- * 
+ *
  * 负责创建和管理 ProjectManClient 实例，确保客户端只初始化一次
  */
 export class ProjectManClientManager {

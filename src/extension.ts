@@ -14,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
   logger.separator();
 
   const cmeExtension = vscode.extensions.getExtension('hecom.hecom-commit-message-editor');
-  
+
   if (!cmeExtension) {
     const msg = '未找到 Commit Message Editor 扩展，请先安装该扩展。';
     logger.error('Extension', msg);
@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
     try {
       logger.info('Extension', '开始注册 Providers...');
       let api: any;
-      
+
       if (!cmeExtension.isActive) {
         api = await cmeExtension.activate();
       } else {
@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         logger.warn('Extension', '用户信息初始化失败，但插件将继续运行', error);
       }
-      
+
       // 注册 Issue Provider
       const issueProvider = new IssueProvider();
       const issueProviderDisposable = api.registerDynamicOptionsProvider(
@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
         issueProvider
       );
       context.subscriptions.push(issueProviderDisposable);
-      
+
       // 注册引入阶段 Provider
       const introductionStageProvider = new IntroductionStageProvider();
       const introductionStageProviderDisposable = api.registerDynamicOptionsProvider(

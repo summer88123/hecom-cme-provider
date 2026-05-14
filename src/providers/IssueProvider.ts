@@ -50,34 +50,70 @@ export class IssueProvider implements DynamicOptionsProvider {
     }
 
     try {
-      const request = new ListIssuesV4Request();
-      request.projectId = projectId;
-
-      const body = new ListIssueRequestV4();
-      body.limit = 50; // 设置返回的 Issue 数量上限，避免一次性拉取过多数据
       const userId = this.userInfoManager.getUserId();
-      body.assignedIds = userId ? [userId] : []; // 只获取分配给当前用户的 Issue
+      const PAGE_SIZE = 50;
+      let offset = 0;
+      let total = Infinity;
+      const allIssues: any[] = [];
 
-      // 设置 tracker IDs (2=bug, 3=task)
-      const trackerIds = [2, 3];
-      body.withTrackerIds(trackerIds);
+      // 循环拉取，直到获取所有数据
+      while (allIssues.length < total) {
+        // 检查是否被取消
+        if (context.cancellationToken?.isCancellationRequested) {
+          logger.info('IssueProvider', '请求已被取消');
+          return [];
+        }
 
-      // 设置 status IDs (1=新建, 2=处理中, 15=已解决, 13=已拒绝)
-      const statusIds = [1, 2, 15, 13];
-      body.withStatusIds(statusIds);
+        const request = new ListIssuesV4Request();
+        request.projectId = projectId;
 
-      request.withBody(body);
+        const body = new ListIssueRequestV4();
+        body.limit = PAGE_SIZE;
+        body.offset = offset;
+        body.assignedIds = userId ? [userId] : []; // 只获取分配给当前用户的 Issue
 
-      const response = await client.listIssuesV4(request);
+        // 设置 tracker IDs (2=bug, 3=task)
+        const trackerIds = [2, 3];
+        body.withTrackerIds(trackerIds);
 
-      // @ts-ignore
-      if (!response || !response.issues) {
+        // 设置 status IDs (1=新建, 2=处理中, 15=重新打开)
+        const statusIds = [1, 2, 15];
+        body.withStatusIds(statusIds);
+
+        request.withBody(body);
+
+        const response = await client.listIssuesV4(request);
+
+        // @ts-ignore
+        if (!response || !response.issues) {
+          break;
+        }
+
+        // @ts-ignore
+        const pageIssues = response.issues;
+        allIssues.push(...pageIssues);
+
+        // 首次请求时获取总数
+        if (offset === 0) {
+          // @ts-ignore
+          total = response.total ?? pageIssues.length;
+          logger.info('IssueProvider', `Issue 总数: ${total}`);
+        }
+
+        offset += pageIssues.length;
+
+        // 如果本页返回数量不足一页，说明已到最后一页
+        if (pageIssues.length < PAGE_SIZE) {
+          break;
+        }
+      }
+
+      if (allIssues.length === 0) {
         logger.warn('IssueProvider', '未获取到 Issue 数据');
         return [];
       }
 
-      // @ts-ignore
-      const issues = response.issues;
+      const issues = allIssues;
       logger.info('IssueProvider', `获取到 Issue 数量: ${issues.length}`);
 
       const options: DynamicOptionItem[] = issues.map((issue) => {

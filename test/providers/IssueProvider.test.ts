@@ -4,8 +4,8 @@ import { IssueProvider } from '../../src/providers/IssueProvider';
 import type { DynamicOptionsContext } from '../../src/types/cme-api';
 
 describe('IssueProvider Test Suite', () => {
-  // 辅助函数：设置完整的配置和 Mock
-  const setupProviderWithMock = (mockIssues: any[]) => {
+  // 辅助函数：设置完整的配置和 Mock（单页数据，total 默认等于 issues 长度）
+  const setupProviderWithMock = (mockIssues: any[], total?: number) => {
     // 设置完整配置
     (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.accessKey', 'test-ak');
     (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.secretKey', 'test-sk');
@@ -19,7 +19,8 @@ describe('IssueProvider Test Suite', () => {
     const mockClient = {
       // @ts-ignore
       listIssuesV4: jest.fn().mockResolvedValue({
-        issues: mockIssues
+        issues: mockIssues,
+        total: total ?? mockIssues.length,
       })
     };
 
@@ -30,8 +31,17 @@ describe('IssueProvider Test Suite', () => {
     const userInfoManager = (provider as any).userInfoManager;
     userInfoManager.getProjectId = jest.fn().mockReturnValue('test-project-id');
 
-    return provider;
+    return { provider, mockClient };
   };
+
+  // 辅助函数：生成指定数量的 Mock Issue 列表
+  const generateMockIssues = (count: number, startId = 1) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: startId + i,
+      name: `Issue ${startId + i}`,
+      tracker: { name: 'Task' },
+      new_custom_fields: [],
+    }));
 
   beforeEach(() => {
     (vscode.workspace as any).__clearConfiguration();
@@ -56,7 +66,7 @@ describe('IssueProvider Test Suite', () => {
 
   describe('Data Transformation', () => {
     test('应该正确转换普通 Issue 数据格式（无自定义字段）', async () => {
-      const provider = setupProviderWithMock([
+      const { provider } = setupProviderWithMock([
         {
           id: 123,
           name: '修复登录问题',
@@ -80,7 +90,7 @@ describe('IssueProvider Test Suite', () => {
     });
 
     test('应该处理缺陷类型为"客户反馈"的 Issue', async () => {
-      const provider = setupProviderWithMock([
+      const { provider } = setupProviderWithMock([
         {
           id: 456,
           name: '用户反馈的问题',
@@ -113,7 +123,7 @@ describe('IssueProvider Test Suite', () => {
     });
 
     test('应该处理缺陷类型为其他值的 Issue', async () => {
-      const provider = setupProviderWithMock([
+      const { provider } = setupProviderWithMock([
         {
           id: 789,
           name: '测试问题',
@@ -146,7 +156,7 @@ describe('IssueProvider Test Suite', () => {
     });
 
     test('应该处理没有自定义字段的 Issue', async () => {
-      const provider = setupProviderWithMock([
+      const { provider } = setupProviderWithMock([
         {
           id: 999,
           name: '简单问题',
@@ -169,7 +179,7 @@ describe('IssueProvider Test Suite', () => {
     });
 
     test('应该处理 Issue 名称为空的情况', async () => {
-      const provider = setupProviderWithMock([
+      const { provider } = setupProviderWithMock([
         {
           id: 111,
           name: '',
@@ -247,6 +257,96 @@ describe('IssueProvider Test Suite', () => {
     test('应该能监听配置变更', () => {
       const provider = new IssueProvider();
       expect(provider).toBeDefined();
+    });
+  });
+
+  describe('Pagination', () => {
+    test('总数超过 50 时应循环拉取所有数据', async () => {
+      // 模拟 total=120，分三页：50+50+20
+      const page1 = generateMockIssues(50, 1);
+      const page2 = generateMockIssues(50, 51);
+      const page3 = generateMockIssues(20, 101);
+      const TOTAL = 120;
+
+      // 配置 mock
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.accessKey', 'test-ak');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.secretKey', 'test-sk');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.domainId', 'test-domain');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.projectId', 'test-project-id');
+
+      const provider = new IssueProvider();
+
+      const mockClient = {
+        listIssuesV4: jest
+          .fn()
+          // @ts-ignore
+          .mockResolvedValueOnce({ issues: page1, total: TOTAL })
+          // @ts-ignore
+          .mockResolvedValueOnce({ issues: page2, total: TOTAL })
+          // @ts-ignore
+          .mockResolvedValueOnce({ issues: page3, total: TOTAL }),
+      };
+
+      (provider as any).clientManager.getClient = jest.fn().mockReturnValue(mockClient);
+      (provider as any).userInfoManager.getProjectId = jest.fn().mockReturnValue('test-project-id');
+
+      const context: DynamicOptionsContext = { tokenValues: {} };
+      const result = await provider.provideOptions(context);
+
+      expect(result).toHaveLength(TOTAL);
+      expect(mockClient.listIssuesV4).toHaveBeenCalledTimes(3);
+
+      // 验证 offset 参数递增
+      // @ts-ignore
+      expect(mockClient.listIssuesV4.mock.calls[0][0].body.offset).toBe(0);
+      // @ts-ignore
+      expect(mockClient.listIssuesV4.mock.calls[1][0].body.offset).toBe(50);
+      // @ts-ignore
+      expect(mockClient.listIssuesV4.mock.calls[2][0].body.offset).toBe(100);
+    });
+
+    test('数据量恰好为 50 时只请求一次', async () => {
+      const { provider, mockClient } = setupProviderWithMock(generateMockIssues(50), 50);
+
+      const context: DynamicOptionsContext = { tokenValues: {} };
+      const result = await provider.provideOptions(context);
+
+      expect(result).toHaveLength(50);
+      expect(mockClient.listIssuesV4).toHaveBeenCalledTimes(1);
+    });
+
+    test('取消令牌在第二页请求前触发时应提前返回空数组', async () => {
+      const page1 = generateMockIssues(50, 1);
+      const TOTAL = 100;
+
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.accessKey', 'test-ak');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.secretKey', 'test-sk');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.domainId', 'test-domain');
+      (vscode.workspace as any).__setConfiguration('hecomCmeProvider.huaweiCloud.projectId', 'test-project-id');
+
+      const provider = new IssueProvider();
+      const tokenSource = new vscode.CancellationTokenSource();
+
+      const mockClient = {
+        // 第一页正常返回，同时触发取消
+        listIssuesV4: jest.fn().mockImplementation(async () => {
+          tokenSource.cancel();
+          return { issues: page1, total: TOTAL };
+        }),
+      };
+
+      (provider as any).clientManager.getClient = jest.fn().mockReturnValue(mockClient);
+      (provider as any).userInfoManager.getProjectId = jest.fn().mockReturnValue('test-project-id');
+
+      const context: DynamicOptionsContext = {
+        tokenValues: {},
+        cancellationToken: tokenSource.token,
+      };
+      const result = await provider.provideOptions(context);
+
+      // 第一页拿到后发现已取消，应在第二次循环开始时返回 []
+      expect(result).toHaveLength(0);
+      expect(mockClient.listIssuesV4).toHaveBeenCalledTimes(1);
     });
   });
 });

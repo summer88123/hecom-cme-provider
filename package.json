@@ -2,7 +2,7 @@
   "name": "hecom-cme-provider",
   "displayName": "Hecom CME Provider",
   "description": "为 Hecom Commit Message Editor 提供基于内部业务场景的 provider",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "hecom",
   "repository": {
     "type": "git",
